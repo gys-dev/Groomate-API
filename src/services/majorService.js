@@ -24,3 +24,7 @@ export function getAllSchools() {
 export function getMajorBySchool(schoolId) {
   return new School({id: schoolId}).majors.fetch();
 }
+
+export function getAll() {
+  return new Major().fetchAll();
+}

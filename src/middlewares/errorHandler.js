@@ -45,8 +45,8 @@ export function methodNotAllowed(req, res) {
  */
 export function bodyParser(err, req, res, next) {
   logger.error(err.message);
-
-  res.status(err.status).json({
+  const error = buildError(err);
+  res.status(error.code).json({
     error: {
       code: err.status,
       message: HttpStatus.getStatusText(err.status)

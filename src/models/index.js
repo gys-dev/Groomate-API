@@ -11,6 +11,7 @@ import RequestMergeGroup from './requestMergeGroup';
 import School from './school';
 import User from './user';
 import UserFavorite from './userFavorite';
+import InviteGroupRequest from './inviteGroup';
 
 export {
     Favorite,
@@ -25,5 +26,6 @@ export {
     RequestMergeGroup,
     School,
     User,
-    UserFavorite
+    UserFavorite,
+    InviteGroupRequest
 }

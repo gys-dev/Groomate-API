@@ -11,3 +11,6 @@ const db = bookshelf(knex);
 db.plugin("pagination")
 
 export default db;
+export {
+    knex
+}

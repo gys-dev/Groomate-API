@@ -39,7 +39,7 @@ export async function updateAccessToken(userId, accessToken) {
   return new User({id: userId}).save({access_token: accessToken});
 }
 
-async function verifyAccessToken(accessToken) {
+export async function verifyAccessToken(accessToken) {
   const url = 'https://graph.facebook.com/me?fields=email,gender&access_token=';
   const response = await fetch(url + accessToken);
   const jsonResponse = await response.json();
@@ -69,10 +69,11 @@ export function getAllUsers() {
 export function getUser(id) {
   return new User({ id })
     .fetch()
-    .then(user => user)
-    .catch(User.NotFoundError, () => {
-      throw Boom.notFound('User not found');
-    });
+}
+
+export function checkUserEmail(email) {
+  return new User({email})
+    .fetch()
 }
 
 /**
@@ -115,7 +116,8 @@ export const getUsersWithFavoriteRelate = async (page, limit, userId) => {
     const fieldSort = Utils.getRandomField(fieldsRandom);
     const sortAxis = Utils.getRandomInRange(0, 1) ? 'DESC' : 'ASC';
     const totalUser = await new User().count();
-    const randomPage = Utils.getRandomInRange(1, totalUser);
+    const page2 = Number.parseInt(totalUser / 30) == 0 ? 1 : Number.parseInt(totalUser / 30)
+    const randomPage = Utils.getRandomInRange(1, page2);
 
     const paginUsers = await new User().where('id', '<>', userId)
       .orderBy(fieldSort, sortAxis)
@@ -125,11 +127,13 @@ export const getUsersWithFavoriteRelate = async (page, limit, userId) => {
       });
 
     const users = paginUsers.map(async row => {
-      const favorites = await row.favorites.fetch()
+      const favorites = await row.favorites.fetch();
+      const major = await row.major.fetch() || undefined;
       const rawFavorites = JSON.stringify(favorites);
       const jsonFavorites = JSON.parse(rawFavorites);
-      delete row.attributes.access_token
-      return Object.assign({favorites: jsonFavorites}, row.attributes)
+      delete row.attributes.access_token;
+      delete row.attributes.major;
+      return Object.assign({favorites: jsonFavorites, major: major.attributes}, row.attributes)
     })
 
     return Promise.all(users)
@@ -140,8 +144,10 @@ export const getUserViaLocationMatch = async (page, limit, userId) => {
   const fieldSort = Utils.getRandomField(fieldsRandom);
   const sortAxis = Utils.getRandomInRange(0, 1) ? 'DESC' : 'ASC';
   const totalUser = await new User().count();
-  const randomPage = Utils.getRandomInRange(1, totalUser);
+  const page2 = Number.parseInt(totalUser / 30) == 0 ? 1 : Number.parseInt(totalUser / 30)
+  const randomPage = Utils.getRandomInRange(1, page2);
 
+  console.log(randomPage)
   const paginUsers = await new User().where('id', '<>', userId)
     .orderBy(fieldSort, sortAxis)
     .fetchPage({
@@ -149,6 +155,15 @@ export const getUserViaLocationMatch = async (page, limit, userId) => {
       page: randomPage,
       
     });
+
+  const users = paginUsers.map(async row => {
+      const major = await row.major.fetch();
+      console.log(major)
+      delete row.attributes.access_token;
+      delete row.attributes.major;
+      return Object.assign({major: major.attributes}, row.attributes)
+  })
   
-  return paginUsers;
+  
+    return Promise.all(users)
 }

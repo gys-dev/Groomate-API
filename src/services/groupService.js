@@ -1,5 +1,6 @@
-import {Group, MemberGroup, RequestJoinGroup, User, RequestMergeGroup} from '../models'
+import {Group, MemberGroup, RequestJoinGroup, User, RequestMergeGroup, InviteGroupRequest} from '../models'
 import _ from 'lodash';
+import { response } from 'express';
 
 // TODO: Lay thanh vien voi list user ra
 
@@ -57,8 +58,9 @@ export const groupByUser = (userId) => {
     }).fetch()
     .then(memberGroup => {
         const groupId = memberGroup.attributes.id_group;
-        return new Group({id: groupId}).fetch()
+        return getGroupDetail(groupId)
     })
+    .catch(() => Promise.reject(null))
    
 }
 
@@ -78,8 +80,9 @@ export const getOwnerGroup = (groupId) => {
 }
 
 export const getJoinGroupRequest = (groupId) => {
-    return new RequestJoinGroup({
-        id_group: groupId
+    return new RequestJoinGroup().where({
+        id_group: groupId,
+        request_status: '0'
     }).fetchAll()
     .then((data) => {
         const listRequest = data;
@@ -226,3 +229,110 @@ export const updateGroup = async (groupId, groupInfo, members = []) => {
         throw error;
     }
 }
+
+export const getGroupDetail = (groupId) => {
+    return new Group({id: groupId}).fetch()
+    .then(async groupModel => {
+        const members = await groupModel.users.fetch();
+
+        const memberData = members.map(member => member.attributes);
+        console.log({...groupModel.attributes, members: memberData})
+        return Promise.resolve({...groupModel.attributes, members: memberData})
+    })
+    .catch(error => {
+        console.log(error);
+        return Promise.reject(error);
+    });
+}
+
+export const createGroup = (sourceUser, inviteUsers) => {
+    // Create group
+
+    return new Group().where({owner: sourceUser.id}).fetchAll()
+    .then(response => {
+        console.log(sourceUser)
+        if (response.length > 0) {
+            throw new Error("Already own group")
+        } else {
+            return new Group({
+                name: 'Nhóm của ' + sourceUser.first_name,
+                owner: sourceUser.id,
+                description: '',
+                created_at: Date.now()
+            }).save(null, {method: 'insert'})
+                .then(groupModel => {
+                    // self join group
+                    joinGroup(sourceUser.id, groupModel.attributes.id);
+                    
+                    const insertMemberRequest = inviteUsers.map(userId => {
+                        return {
+                            group_id: groupModel.attributes.id,
+                            user_id: userId,
+                            request_status: 0,
+                            created_at: Date.now()
+                        }
+                    })
+        
+                    return InviteGroupRequest.collection(insertMemberRequest).invokeThen("save", null, {method: 'insert'})
+                })
+                .catch(error => {
+                    console.log(error);
+                    throw error
+                });
+        }
+       
+    })
+    .catch(error => {
+        console.log(error)
+        throw error
+    })
+    
+   
+}
+
+export const getUserInviteGroup = (userId) => {
+    return new InviteGroupRequest().where({
+        user_id: userId,
+        request_status: 0
+    }).fetchAll()
+    .then(data => {
+        const listGroups = data.map(async inviteModel => {
+            const group = await inviteModel.group.fetch();
+            const user = await inviteModel.user.fetch();
+            return {
+                group: group.attributes, 
+                ...inviteModel.attributes,
+                user: user.attributes
+            };
+            
+        })
+
+        return Promise.all(listGroups)
+    })
+}
+export const verifyJoinGroup = async (idUser, idGroup, joinAction) => {
+    try {
+        const requestJoinModal = await new InviteGroupRequest().where({
+            group_id: idGroup,
+            user_id: idUser
+        }).save({request_status: joinAction}, {method: 'update'});
+
+        if (requestJoinModal && joinAction === 1) {
+            const memberGroup = await new MemberGroup({
+                id_group: idGroup,
+                id_user: idUser,
+                date_join: Date.now()
+            }).save(null, {method: 'insert'});
+
+            return requestJoinModal.group.fetch();
+        }
+
+        return requestJoinModal.group.fetch();;
+    } catch(error) {
+        console.log(error);
+
+        throw new Error("Server Error");
+        
+    }
+}
+

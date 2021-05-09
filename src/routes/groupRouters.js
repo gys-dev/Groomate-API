@@ -2,6 +2,7 @@ import {Router} from 'express'
 import * as groupControllers from '../controllers/group'
 import auth from '../middlewares/auth'
 import groupRequire from '../middlewares/groupRequire'
+import upload from '../upload'
 
 const router = Router()
 
@@ -18,6 +19,8 @@ router.post('/member', groupRequire, groupControllers.getMembers);
 router.post('/requestMergeGroup' ,groupRequire, groupControllers.requestMergeGroup);
 router.get('/requestMergeGroup' ,groupRequire, groupControllers.getMergeGroup);
 router.delete('/deleteYourGroup', groupRequire, groupControllers.deleteYourGroup)
-router.put('/updateYourGroup', groupRequire, groupControllers.updateYourGroup)
-
+router.put('/updateYourGroup',groupRequire, upload.single('img'), groupControllers.updateYourGroup)
+router.post('/create', groupControllers.createGroup);
+router.get('/requestInviteGroup', groupRequire, groupControllers.getUserInvite)
+router.post('/verifyJoin', groupControllers.verifyJoin)
 export default router;

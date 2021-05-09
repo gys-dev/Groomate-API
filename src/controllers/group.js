@@ -1,6 +1,8 @@
 import * as groupServices from '../services/groupService'
 import {socketClient, IO} from '../index';
-import {Actions} from '../socketio'
+import {Actions} from '../socketio';
+import Utils from '../utils/utils';
+import { update } from './users';
 const {hashMD5} = require('../utils/genHash')
 
 export function joinGroup(req, res, next) {
@@ -112,7 +114,7 @@ export function approveMember(req, res, next) {
 
     switch (action) {
         case 'approve': {
-            groupServices.approveMemberJoinGroup(2, userId, 1)
+            groupServices.approveMemberJoinGroup(groupId, userId, 1)
             .then(data => {
                 // const safeUser = data.attributes;
                 // delete safeUser.access_token;
@@ -129,7 +131,7 @@ export function approveMember(req, res, next) {
             break;
         }
         case 'reject': {
-            groupServices.approveMemberJoinGroup(2, userId, 2)
+            groupServices.approveMemberJoinGroup(groupId, userId, 2)
             .then(data => {
                 const privateChannel2 = hashMD5('user_private_' + userId);
 
@@ -185,13 +187,26 @@ export function deleteYourGroup(req, res, next) {
 export function updateYourGroup(req, res, next) {
     const groupId = res.locals.groupId;
     const body = req.body;
-    const {name, description, img, members} = body
+    const {name, description, members} = body
+    const file = req.file;
+    let path;
+    if (file) {
+        const fileName = file.filename;
+        path = Utils.getHostURL(req) + '/images/' + fileName;
+        
+    } 
 
-    groupServices.updateGroup({
+    let updateBody = {
         name,  
         description,
-        img
-    }, members)
+    }
+
+    if (path) {
+        updateBody.img = path;
+    }
+
+
+    groupServices.updateGroup(updateBody, members)
     .then(data => {
         if (data) {
             res.json({data: [], message: "success", status: 1})
@@ -199,5 +214,55 @@ export function updateYourGroup(req, res, next) {
         
     })
     .catch(error => next(error))
+}
+
+export function createGroup(req, res, next) {
+    const inviteUsers = req.body.inviteUsers;
+    const authUser = res.locals.authUser;
+    
+    groupServices.createGroup(authUser, inviteUsers)
+    .then(data => {
+        res.json({data})
+    })
+    .catch(err => next(err))
+} 
+
+export function getUserInvite(req, res, next) {
+    const authUser = res.locals.authUser;
+    const groupId = res.locals.groupId;
+    groupServices.getUserInviteGroup(authUser.id)
+    .then(data => {
+        res.json({data})
+    })
+    .catch(err => next(err))
+    
+}
+
+export function verifyJoin(req, res, next) {
+    const authUser = res.locals.authUser;
+    const {groupId, action} = req.body;
+    switch(action) {
+        case 'approve': {
+            groupServices.verifyJoinGroup(authUser.id, groupId, 1)
+            .then(data => {
+                res.json({data})
+            })
+            .catch(error => next(error))
+
+            break;
+        }
+        case 'reject': {
+            groupServices.verifyJoinGroup(authUser.id, groupId, 2)
+            .then(data => {
+                res.json({data})
+            })
+            .catch(error => next(error))
+
+            break;
+        }
+        default: {
+            res.json({message: "action not found"})
+        }
+    }
 }
 

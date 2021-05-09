@@ -70,7 +70,7 @@ app.get('/chat', (req, res) => res.redirect('index.html'))
 
 
 // This error handler must be before any other error middleware
-app.use(Sentry.Handlers.errorHandler());
+// app.use(Sentry.Handlers.errorHandler());
 
 // Error Middleware
 app.use(errorHandler.genericErrorHandler);

@@ -6,9 +6,9 @@ export default async function (req, res, next) {
     try {
          const authUser = res.locals.authUser;
          const group = await groupServices.groupByUser(authUser.id);
-         if (group.attributes) {
-            res.locals.channels.group = hashMD5('group_' + group.attributes.id);
-            res.locals.groupId = group.attributes.id;
+         if (group) {
+            res.locals.channels.group = hashMD5('group_' + group.id);
+            res.locals.groupId = group.id;
             
             next();
             return

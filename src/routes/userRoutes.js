@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import * as userController from '../controllers/users';
+import * as favoriteController from '../controllers/favorite'
 import { findUser, userValidator } from '../validators/userValidator';
 import auth from '../middlewares/auth'
 import userExist from '../middlewares/userExist'
@@ -15,11 +16,13 @@ router.post('/login', userController.loginUser);
 router.get('/me', auth, userController.fetchMe);
 router.put('/me', auth, upload.single('picture'), userController.updateMe)
 router.put('/deactive', auth, userController.deactivaAcccount);
+router.post('/addFavorites', auth, favoriteController.bulkAddFavorites)
 /**
  * POST /api/users/register
  */
 router.post('/register', userExist, userController.create);
 
+router.get('/checkUser', userController.checkUserExis);
 /**
  * GET /api/users
  */

@@ -48,7 +48,7 @@ export async function getSuggestMatchLocation(req, res, next) {
         const authUser = res.locals.authUser;
 
         const listSuggestUser = await userServices.getUserViaLocationMatch(1,1, authUser.id);
-        const listUser = listSuggestUser.map(item => item.attributes);
+        const listUser = listSuggestUser.map(item => item);
 
         const listDistanceUser = listUser.map(user => {
             const currentUserDistance = JSON.parse(authUser.location);
@@ -68,7 +68,7 @@ export async function getSuggestMatchLocation(req, res, next) {
 
         const sortedDistanceUser = _.orderBy(listDistanceUser, ['distance'], ['asc']);
 
-        res.json(sortedDistanceUser);
+        res.json({data: sortedDistanceUser});
     } catch (err) {
         next(err);
     }

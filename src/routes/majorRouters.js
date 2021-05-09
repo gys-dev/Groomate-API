@@ -15,4 +15,9 @@ router.get('/', majorControllers.getAllSchools);
  */
 router.get('/:id', majorControllers.getMajorsBySchool);
 
+/**
+ * GET /api/school/:id
+ */
+router.get('/majors', majorControllers.getAllMajors);
+
 export default router;

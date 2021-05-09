@@ -43,10 +43,29 @@ export function fetchById(req, res, next) {
  * @param {Function} next
  */
 export function create(req, res, next) {
-  userService
+  userService.verifyAccessToken(req.body.access_token)
+  .then(fbUserData => {
+    req.body.email = fbUserData.email;
+    req.body.gender = fbUserData.gender;
+    userService
     .createUser(req.body)
-    .then(data => res.status(HttpStatus.CREATED).json({ data }))
+    .then(data => {
+      let user = data.attributes;
+
+      const payload = {...user};
+      jwt.sign(payload, process.env.APP_JWT_PRIVATE_KEY,  {}, (err, token) => {
+        if (!err) {
+          res.status(HttpStatus.CREATED).json(Object.assign(user, {token}));
+        } else {
+          next(err)
+        }
+      })
+
+    })
     .catch(err => next(err));
+  })
+  .catch(err => next(err));
+ 
 }
 
 /**
@@ -90,11 +109,11 @@ export async function loginUser(req, res, next) {
     let user = rawUser.attributes;
     const group = await groupService.groupByUser(user.id);
 
-    const groupIndentify = hashMD5(`group_${group.attributes.id}`);
-
-
-    const payload = {...user, groupId: groupIndentify};
-    console.log(payload)
+    let payload = {...user};
+    if (group) {
+      const groupIndentify = hashMD5(`group_${group.attributes.id}`);
+      payload = {...user, groupId: groupIndentify};
+    }
 
     jwt.sign(payload, process.env.APP_JWT_PRIVATE_KEY,  {}, (err, token) => {
 
@@ -148,6 +167,25 @@ export async function deactivaAcccount(req, res, next) {
     userService.updateUser(authUser.id, {active: active})
     .then(data => res.json({ data }))
     .catch(err => next(err));
+}
+
+export async function checkUserExis(req, res, next) {
+  const id = req.query.id;
+  userService.getUser(id)
+  .then(data => {
+    res.json({
+      status: "Fail",
+      code: 0,
+      message: "User Exist"
+    })
+  })
+  .catch(error => {
+     res.json({
+      status: "OK",
+      code: 1,
+      message: "Ok to create user"
+    })
+  })
 }
 
 export async function fetchMe(req, res, next) {
